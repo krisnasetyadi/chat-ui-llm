@@ -20,6 +20,7 @@ import {
   FileText,
   Copy,
   Check,
+  X,
 } from "lucide-react";
 
 interface PdfViewerDialogProps {
@@ -135,11 +136,12 @@ export function PdfViewerDialog({
           maxHeight: "98vh",
           height: "98vh",
         }}
+        showCloseButton={false}
       >
         {/* Header */}
         <DialogHeader className="px-4 py-3 border-b shrink-0">
           <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-2 min-w-0">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
               <FileText className="h-5 w-5 text-teal-500 shrink-0" />
               <DialogTitle className="text-base truncate">
                 {fileName}
@@ -202,6 +204,19 @@ export function PdfViewerDialog({
                 title="Buka di tab baru"
               >
                 <ExternalLink className="h-4 w-4" />
+              </Button>
+
+              <div className="w-px h-6 bg-border mx-1" />
+
+              {/* Close Button */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onOpenChange(false)}
+                title="Tutup"
+                className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive"
+              >
+                <X className="h-5 w-5" />
               </Button>
             </div>
           </div>

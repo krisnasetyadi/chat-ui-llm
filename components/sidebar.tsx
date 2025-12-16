@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -15,11 +15,19 @@ import {
   ChevronDown,
   ChevronRight,
   Loader2,
+  Eye,
+  File,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   PdfCollectionsApi,
   PdfUploadApi,
@@ -41,15 +49,31 @@ interface SidebarProps {
   onClose: () => void;
   apiUrl: string;
   onApiUrlChange: (url: string) => void;
+  onPreviewPdf?: (collectionId: string, fileName: string) => void;
 }
+
+// Helper function to get display title from file names
+const getCollectionTitle = (collection: PdfCollection): string => {
+  if (collection.file_names && collection.file_names.length > 0) {
+    // Get first file name and remove extension
+    const firstName = collection.file_names[0];
+    return firstName
+      .replace(/\.pdf$/i, "")
+      .replace(/_/g, " ")
+      .replace(/-/g, " ");
+  }
+  return "Untitled Collection";
+};
 
 export function Sidebar({
   isOpen,
   onClose,
   apiUrl,
   onApiUrlChange,
+  onPreviewPdf,
 }: SidebarProps) {
   const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState<string>("pdf");
   const [pdfCollections, setPdfCollections] = useState<PdfCollection[]>([]);
   const [chatCollections, setChatCollections] = useState<ChatCollection[]>([]);
   const [dbTables, setDbTables] = useState<any[]>([]);
@@ -63,6 +87,7 @@ export function Sidebar({
     setLoadingPdf(true);
     PdfCollectionsApi.get<PdfCollection[]>()
       .then((data) => {
+        console.log("Fetched PDF collections:", data);
         setPdfCollections(data);
       })
       .catch((error) => {
@@ -80,12 +105,22 @@ export function Sidebar({
 
   const fetchChatCollections = () => {
     setLoadingChat(true);
-    ChatCollectionsApi.get<ChatCollection[]>()
+    ChatCollectionsApi.get<
+      { collections: ChatCollection[]; count: number } | ChatCollection[]
+    >()
       .then((data) => {
-        setChatCollections(data);
+        // Handle both response formats: { collections: [...] } or [...]
+        if (Array.isArray(data)) {
+          setChatCollections(data);
+        } else if (data && Array.isArray(data.collections)) {
+          setChatCollections(data.collections);
+        } else {
+          setChatCollections([]);
+        }
       })
       .catch((error) => {
         console.error("Failed to fetch chat collections:", error);
+        setChatCollections([]);
         toast({
           title: "Error",
           description: "Failed to fetch chat collections",
@@ -134,6 +169,20 @@ export function Sidebar({
       });
   };
 
+  // Fetch data based on active tab
+  useEffect(() => {
+    if (activeTab === "pdf") {
+      fetchCollections();
+    } else if (activeTab === "chat") {
+      fetchChatCollections();
+    } else if (activeTab === "database") {
+      fetchDbTables();
+    }
+  }, [activeTab]);
+
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+  };
   const handlePdfUpload = (files: FileList | null) => {
     if (!files || files.length === 0) return;
 
@@ -273,12 +322,15 @@ export function Sidebar({
           </Button>
         </div>
 
-        <Tabs defaultValue="pdf" className="flex-1 flex flex-col">
+        <Tabs
+          value={activeTab}
+          onValueChange={handleTabChange}
+          className="flex-1 flex flex-col"
+        >
           <TabsList className="w-full rounded-none border-b border-border bg-transparent p-0 h-auto">
             <TabsTrigger
               value="pdf"
               className="flex-1 rounded-none data-[state=active]:border-b-2 data-[state=active]:border-teal-500"
-              onClick={fetchCollections}
             >
               <FileText className="h-4 w-4 mr-2" />
               PDFs
@@ -286,7 +338,6 @@ export function Sidebar({
             <TabsTrigger
               value="chat"
               className="flex-1 rounded-none data-[state=active]:border-b-2 data-[state=active]:border-teal-500"
-              onClick={fetchChatCollections}
             >
               <MessageSquare className="h-4 w-4 mr-2" />
               Chats
@@ -294,7 +345,6 @@ export function Sidebar({
             <TabsTrigger
               value="database"
               className="flex-1 rounded-none data-[state=active]:border-b-2 data-[state=active]:border-teal-500"
-              onClick={fetchDbTables}
             >
               <Database className="h-4 w-4 mr-2" />
               DB
@@ -339,46 +389,116 @@ export function Sidebar({
                   <>
                     {pdfCollections.length > 50 && (
                       <p className="text-xs text-muted-foreground mb-2">
-                        Showing {pdfCollections.length} collections - Use search
-                        to filter
+                        Showing {pdfCollections.length} collections
                       </p>
                     )}
                     {pdfCollections.map((collection) => (
                       <Card
                         key={collection.collection_id}
-                        className="p-3 hover:bg-accent/50 transition-colors"
+                        className="p-2 hover:bg-accent/50 transition-colors group w-70"
                       >
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate">
-                              {collection.collection_id}
-                            </p>
-                            <div className="flex items-center gap-2 mt-1">
-                              <Badge variant="secondary" className="text-xs">
-                                {collection.document_count} docs
-                              </Badge>
-                              <span className="text-xs text-muted-foreground">
-                                {new Date(
-                                  collection.created_at
-                                ).toLocaleDateString()}
-                              </span>
-                            </div>
-                            {collection.file_names && (
-                              <p className="text-xs text-muted-foreground mt-1 truncate">
-                                {collection.file_names.join(", ")}
-                              </p>
-                            )}
-                          </div>
+                        <div className="flex items-center gap-2">
+                          {/* Document Icon */}
+                          <FileText className="h-4 w-4 text-teal-500 flex-shrink-0" />
+
+                          {/* Title with tooltip */}
+                          <TooltipProvider delayDuration={300}>
+                            <Tooltip>
+                              <TooltipTrigger asChild className="">
+                                <h3 className="text-xs font-medium text-foreground truncate flex-1 cursor-default">
+                                  {getCollectionTitle(collection)}
+                                </h3>
+                              </TooltipTrigger>
+                              <TooltipContent
+                                side="top"
+                                className="max-w-[280px]"
+                              >
+                                <p className="text-xs break-words">
+                                  {getCollectionTitle(collection)}
+                                </p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+
+                          {/* Delete Button */}
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-destructive hover:text-destructive"
+                            className="h-5 w-5 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
                             onClick={() =>
                               deleteCollection(collection.collection_id)
                             }
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Trash2 className="h-3 w-3" />
                           </Button>
+                        </div>
+
+                        {/* File list - compact */}
+                        {collection.file_names &&
+                          collection.file_names.length > 0 && (
+                            <div className="mt-1.5 pl-6 space-y-0.5">
+                              {collection.file_names
+                                .slice(0, 2)
+                                .map((fileName, idx) => (
+                                  <TooltipProvider
+                                    key={idx}
+                                    delayDuration={300}
+                                  >
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <div
+                                          className="flex items-center gap-1.5 text-[11px] text-muted-foreground hover:text-teal-500 cursor-pointer group/file"
+                                          onClick={() =>
+                                            onPreviewPdf?.(
+                                              collection.collection_id,
+                                              fileName
+                                            )
+                                          }
+                                        >
+                                          <File className="h-2.5 w-2.5 flex-shrink-0" />
+                                          <span className="truncate flex-1">
+                                            {fileName}
+                                          </span>
+                                          <Eye className="h-2.5 w-2.5 opacity-0 group-hover/file:opacity-100 text-teal-500 flex-shrink-0" />
+                                        </div>
+                                      </TooltipTrigger>
+                                      <TooltipContent
+                                        side="right"
+                                        className="max-w-[300px]"
+                                      >
+                                        <p className="text-xs break-all">
+                                          {fileName}
+                                        </p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                ))}
+                              {collection.file_names.length > 2 && (
+                                <span className="text-[10px] text-muted-foreground">
+                                  +{collection.file_names.length - 2} more
+                                </span>
+                              )}
+                            </div>
+                          )}
+
+                        {/* Meta info - compact */}
+                        <div className="flex items-center gap-1.5 mt-1.5 pl-6">
+                          <Badge
+                            variant="secondary"
+                            className="text-[9px] px-1 py-0 h-4"
+                          >
+                            {collection.document_count} docs
+                          </Badge>
+                          <span className="text-[9px] text-muted-foreground">
+                            {new Date(collection.created_at).toLocaleDateString(
+                              "id-ID",
+                              {
+                                day: "numeric",
+                                month: "short",
+                                year: "numeric",
+                              }
+                            )}
+                          </span>
                         </div>
                       </Card>
                     ))}
