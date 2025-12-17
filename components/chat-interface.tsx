@@ -731,7 +731,6 @@ export function ChatInterface({ apiUrl }: ChatInterfaceProps) {
                             className="text-xs"
                           >
                             {provider === "huggingface" && "🤗 HuggingFace"}
-                            {provider === "ollama" && "🦙 Ollama"}
                             {provider === "gemini" && "✨ Gemini"}
                           </SelectItem>
                         )

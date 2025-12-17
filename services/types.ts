@@ -1,6 +1,6 @@
 // ===================== LLM MODELS =====================
 
-export type LLMProvider = "huggingface" | "ollama" | "gemini";
+export type LLMProvider = "huggingface" | "gemini";
 
 export interface AvailableModelsResponse {
   default_provider: LLMProvider;
