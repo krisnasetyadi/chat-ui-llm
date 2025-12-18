@@ -43,6 +43,7 @@ import type {
   ChatUploadResponse,
   DeleteResponse,
 } from "@/services";
+import { VersionInfo } from "@/components/version-info";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -680,7 +681,7 @@ export function Sidebar({
           </TabsContent>
         </Tabs>
 
-        <div className="p-4 border-t border-border">
+        <div className="p-4 border-t border-border space-y-3">
           <div className="space-y-2">
             <label className="text-xs font-medium text-muted-foreground">
               API URL
@@ -691,6 +692,9 @@ export function Sidebar({
               placeholder="http://localhost:8000"
               className="text-sm"
             />
+          </div>
+          <div className="pt-2 border-t border-border/50">
+            <VersionInfo />
           </div>
         </div>
       </aside>
