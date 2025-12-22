@@ -18,7 +18,9 @@ export interface ModelSelection {
 
 export interface HybridQueryRequest {
   question: string;
-  collection_id?: string | null;
+  collection_id?: string | null; // DEPRECATED: use pdf_collection_ids instead
+  pdf_collection_ids?: string[] | null; // Specific PDF collections to search
+  chat_collection_ids?: string[] | null; // Specific chat collections to search
   include_pdf_results?: boolean;
   include_db_results?: boolean;
   include_chat_results?: boolean;

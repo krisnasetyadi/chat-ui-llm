@@ -17,6 +17,8 @@ import {
   Loader2,
   Eye,
   File,
+  CheckSquare,
+  Square,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -51,6 +53,11 @@ interface SidebarProps {
   apiUrl: string;
   onApiUrlChange: (url: string) => void;
   onPreviewPdf?: (collectionId: string, fileName: string) => void;
+  // Collection selection props
+  selectedPdfCollections?: string[];
+  selectedChatCollections?: string[];
+  onPdfCollectionsChange?: (ids: string[]) => void;
+  onChatCollectionsChange?: (ids: string[]) => void;
 }
 
 // Helper function to get display title from file names
@@ -72,6 +79,10 @@ export function Sidebar({
   apiUrl,
   onApiUrlChange,
   onPreviewPdf,
+  selectedPdfCollections = [],
+  selectedChatCollections = [],
+  onPdfCollectionsChange,
+  onChatCollectionsChange,
 }: SidebarProps) {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<string>("pdf");
@@ -305,13 +316,13 @@ export function Sidebar({
 
       <aside
         className={cn(
-          "fixed md:relative inset-y-0 left-0 z-50 w-80 bg-card border-r border-border transform transition-transform duration-300 ease-in-out flex flex-col",
+          "fixed md:relative inset-y-0 left-0 z-50 w-80 bg-card border-r border-border transform transition-transform duration-300 ease-in-out flex flex-col h-screen max-h-screen overflow-hidden",
           isOpen
             ? "translate-x-0"
             : "-translate-x-full md:translate-x-0 md:w-0 md:border-0"
         )}
       >
-        <div className="flex items-center justify-between p-4 border-b border-border">
+        <div className="flex items-center justify-between p-4 border-b border-border shrink-0">
           <h2 className="font-semibold text-foreground">Workspace</h2>
           <Button
             variant="ghost"
@@ -326,7 +337,7 @@ export function Sidebar({
         <Tabs
           value={activeTab}
           onValueChange={handleTabChange}
-          className="flex-1 flex flex-col"
+          className="flex-1 flex flex-col min-h-0 overflow-hidden"
         >
           <TabsList className="w-full rounded-none border-b border-border bg-transparent p-0 h-auto">
             <TabsTrigger
@@ -352,8 +363,11 @@ export function Sidebar({
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="pdf" className="flex-1 flex flex-col mt-0">
-            <div className="p-4 border-b border-border">
+          <TabsContent
+            value="pdf"
+            className="flex-1 flex flex-col mt-0 min-h-0 overflow-hidden"
+          >
+            <div className="p-4 border-b border-border shrink-0">
               <label htmlFor="pdf-upload">
                 <Button
                   className="w-full bg-teal-500 hover:bg-teal-600 text-white"
@@ -376,7 +390,7 @@ export function Sidebar({
               />
             </div>
 
-            <ScrollArea className="flex-1">
+            <div className="flex-1 overflow-y-auto">
               <div className="p-4 space-y-2">
                 {loadingPdf ? (
                   <div className="flex items-center justify-center py-8">
@@ -393,124 +407,156 @@ export function Sidebar({
                         Showing {pdfCollections.length} collections
                       </p>
                     )}
-                    {pdfCollections.map((collection) => (
-                      <Card
-                        key={collection.collection_id}
-                        className="p-2 hover:bg-accent/50 transition-colors group w-70"
-                      >
-                        <div className="flex items-center gap-2">
-                          {/* Document Icon */}
-                          <FileText className="h-4 w-4 text-teal-500 flex-shrink-0" />
-
-                          {/* Title with tooltip */}
-                          <TooltipProvider delayDuration={300}>
-                            <Tooltip>
-                              <TooltipTrigger asChild className="">
-                                <h3 className="text-xs font-medium text-foreground truncate flex-1 cursor-default">
-                                  {getCollectionTitle(collection)}
-                                </h3>
-                              </TooltipTrigger>
-                              <TooltipContent
-                                side="top"
-                                className="max-w-[280px]"
-                              >
-                                <p className="text-xs break-words">
-                                  {getCollectionTitle(collection)}
-                                </p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-
-                          {/* Delete Button */}
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-5 w-5 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
-                            onClick={() =>
-                              deleteCollection(collection.collection_id)
-                            }
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </div>
-
-                        {/* File list - compact */}
-                        {collection.file_names &&
-                          collection.file_names.length > 0 && (
-                            <div className="mt-1.5 pl-6 space-y-0.5">
-                              {collection.file_names
-                                .slice(0, 2)
-                                .map((fileName, idx) => (
-                                  <TooltipProvider
-                                    key={idx}
-                                    delayDuration={300}
-                                  >
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <div
-                                          className="flex items-center gap-1.5 text-[11px] text-muted-foreground hover:text-teal-500 cursor-pointer group/file"
-                                          onClick={() =>
-                                            onPreviewPdf?.(
-                                              collection.collection_id,
-                                              fileName
-                                            )
-                                          }
-                                        >
-                                          <File className="h-2.5 w-2.5 flex-shrink-0" />
-                                          <span className="truncate flex-1">
-                                            {fileName}
-                                          </span>
-                                          <Eye className="h-2.5 w-2.5 opacity-0 group-hover/file:opacity-100 text-teal-500 flex-shrink-0" />
-                                        </div>
-                                      </TooltipTrigger>
-                                      <TooltipContent
-                                        side="right"
-                                        className="max-w-[300px]"
-                                      >
-                                        <p className="text-xs break-all">
-                                          {fileName}
-                                        </p>
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  </TooltipProvider>
-                                ))}
-                              {collection.file_names.length > 2 && (
-                                <span className="text-[10px] text-muted-foreground">
-                                  +{collection.file_names.length - 2} more
-                                </span>
-                              )}
-                            </div>
+                    {pdfCollections.map((collection) => {
+                      const isSelected = selectedPdfCollections.includes(
+                        collection.collection_id
+                      );
+                      return (
+                        <Card
+                          key={collection.collection_id}
+                          className={cn(
+                            "p-2 hover:bg-accent/50 transition-colors group w-70 cursor-pointer",
+                            isSelected &&
+                              "ring-2 ring-teal-500 bg-teal-50 dark:bg-teal-950"
                           )}
+                          onClick={() => {
+                            onPdfCollectionsChange?.(
+                              isSelected
+                                ? selectedPdfCollections.filter(
+                                    (id) => id !== collection.collection_id
+                                  )
+                                : [
+                                    ...selectedPdfCollections,
+                                    collection.collection_id,
+                                  ]
+                            );
+                          }}
+                        >
+                          <div className="flex items-center gap-2">
+                            {/* Selection Checkbox */}
+                            {isSelected ? (
+                              <CheckSquare className="h-4 w-4 text-teal-500 flex-shrink-0" />
+                            ) : (
+                              <Square className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                            )}
 
-                        {/* Meta info - compact */}
-                        <div className="flex items-center gap-1.5 mt-1.5 pl-6">
-                          <Badge
-                            variant="secondary"
-                            className="text-[9px] px-1 py-0 h-4"
-                          >
-                            {collection.document_count} docs
-                          </Badge>
-                          <span className="text-[9px] text-muted-foreground">
-                            {new Date(collection.created_at).toLocaleDateString(
-                              "id-ID",
-                              {
+                            {/* Document Icon */}
+                            <FileText className="h-4 w-4 text-teal-500 flex-shrink-0" />
+
+                            {/* Title with tooltip */}
+                            <TooltipProvider delayDuration={300}>
+                              <Tooltip>
+                                <TooltipTrigger asChild className="">
+                                  <h3 className="text-xs font-medium text-foreground truncate flex-1 cursor-default">
+                                    {getCollectionTitle(collection)}
+                                  </h3>
+                                </TooltipTrigger>
+                                <TooltipContent
+                                  side="top"
+                                  className="max-w-[280px]"
+                                >
+                                  <p className="text-xs break-words">
+                                    {getCollectionTitle(collection)}
+                                  </p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+
+                            {/* Delete Button */}
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-5 w-5 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                deleteCollection(collection.collection_id);
+                              }}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+
+                          {/* File list - compact */}
+                          {collection.file_names &&
+                            collection.file_names.length > 0 && (
+                              <div className="mt-1.5 pl-6 space-y-0.5">
+                                {collection.file_names
+                                  .slice(0, 2)
+                                  .map((fileName, idx) => (
+                                    <TooltipProvider
+                                      key={idx}
+                                      delayDuration={300}
+                                    >
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <div
+                                            className="flex items-center gap-1.5 text-[11px] text-muted-foreground hover:text-teal-500 cursor-pointer group/file"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              onPreviewPdf?.(
+                                                collection.collection_id,
+                                                fileName
+                                              );
+                                            }}
+                                          >
+                                            <File className="h-2.5 w-2.5 flex-shrink-0" />
+                                            <span className="truncate flex-1">
+                                              {fileName}
+                                            </span>
+                                            <Eye className="h-2.5 w-2.5 opacity-0 group-hover/file:opacity-100 text-teal-500 flex-shrink-0" />
+                                          </div>
+                                        </TooltipTrigger>
+                                        <TooltipContent
+                                          side="right"
+                                          className="max-w-[300px]"
+                                        >
+                                          <p className="text-xs break-all">
+                                            {fileName}
+                                          </p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                  ))}
+                                {collection.file_names.length > 2 && (
+                                  <span className="text-[10px] text-muted-foreground">
+                                    +{collection.file_names.length - 2} more
+                                  </span>
+                                )}
+                              </div>
+                            )}
+
+                          {/* Meta info - compact */}
+                          <div className="flex items-center gap-1.5 mt-1.5 pl-6">
+                            <Badge
+                              variant="secondary"
+                              className="text-[9px] px-1 py-0 h-4"
+                            >
+                              {collection.document_count} docs
+                            </Badge>
+                            <span className="text-[9px] text-muted-foreground">
+                              {new Date(
+                                collection.created_at
+                              ).toLocaleDateString("id-ID", {
                                 day: "numeric",
                                 month: "short",
                                 year: "numeric",
-                              }
-                            )}
-                          </span>
-                        </div>
-                      </Card>
-                    ))}
+                              })}
+                            </span>
+                          </div>
+                        </Card>
+                      );
+                    })}
                   </>
                 )}
               </div>
-            </ScrollArea>
+            </div>
           </TabsContent>
 
-          <TabsContent value="chat" className="flex-1 flex flex-col mt-0">
-            <div className="p-4 border-b border-border">
+          <TabsContent
+            value="chat"
+            className="flex-1 flex flex-col mt-0 min-h-0 overflow-hidden"
+          >
+            <div className="p-4 border-b border-border shrink-0">
               <label htmlFor="chat-upload">
                 <Button
                   className="w-full bg-teal-500 hover:bg-teal-600 text-white"
@@ -537,7 +583,7 @@ export function Sidebar({
               </p>
             </div>
 
-            <ScrollArea className="flex-1">
+            <div className="flex-1 overflow-y-auto">
               <div className="p-4 space-y-2">
                 {loadingChat ? (
                   <div className="flex items-center justify-center py-8">
@@ -555,46 +601,82 @@ export function Sidebar({
                         view all
                       </p>
                     )}
-                    {chatCollections.map((collection: any) => (
-                      <Card
-                        key={collection.collection_id}
-                        className="p-3 hover:bg-accent/50 transition-colors"
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate">
-                              {collection.file_name}
-                            </p>
-                            <div className="flex items-center gap-2 mt-1">
-                              <Badge variant="secondary" className="text-xs">
-                                {collection.message_count} messages
-                              </Badge>
-                              <Badge variant="outline" className="text-xs">
-                                {collection.platform}
-                              </Badge>
+                    {chatCollections.map((collection: any) => {
+                      const isSelected = selectedChatCollections.includes(
+                        collection.collection_id
+                      );
+                      return (
+                        <Card
+                          key={collection.collection_id}
+                          className={cn(
+                            "p-3 hover:bg-accent/50 transition-colors cursor-pointer",
+                            isSelected &&
+                              "ring-2 ring-purple-500 bg-purple-50 dark:bg-purple-950"
+                          )}
+                          onClick={() => {
+                            onChatCollectionsChange?.(
+                              isSelected
+                                ? selectedChatCollections.filter(
+                                    (id) => id !== collection.collection_id
+                                  )
+                                : [
+                                    ...selectedChatCollections,
+                                    collection.collection_id,
+                                  ]
+                            );
+                          }}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex items-start gap-2 flex-1 min-w-0">
+                              {/* Selection Checkbox */}
+                              {isSelected ? (
+                                <CheckSquare className="h-4 w-4 text-purple-500 flex-shrink-0 mt-0.5" />
+                              ) : (
+                                <Square className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium truncate">
+                                  {collection.filename || collection.file_name}
+                                </p>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <Badge
+                                    variant="secondary"
+                                    className="text-xs"
+                                  >
+                                    {collection.message_count} messages
+                                  </Badge>
+                                  <Badge variant="outline" className="text-xs">
+                                    {collection.platform}
+                                  </Badge>
+                                </div>
+                              </div>
                             </div>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-destructive hover:text-destructive"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                deleteChatCollection(collection.collection_id);
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-destructive hover:text-destructive"
-                            onClick={() =>
-                              deleteChatCollection(collection.collection_id)
-                            }
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </Card>
-                    ))}
+                        </Card>
+                      );
+                    })}
                   </>
                 )}
               </div>
-            </ScrollArea>
+            </div>
           </TabsContent>
 
-          <TabsContent value="database" className="flex-1 flex flex-col mt-0">
-            <ScrollArea className="flex-1">
+          <TabsContent
+            value="database"
+            className="flex-1 flex flex-col mt-0 min-h-0 overflow-hidden"
+          >
+            <div className="flex-1 overflow-y-auto">
               <div className="p-4 space-y-2">
                 {dbTables.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-8">
@@ -677,11 +759,11 @@ export function Sidebar({
                   ))
                 )}
               </div>
-            </ScrollArea>
+            </div>
           </TabsContent>
         </Tabs>
 
-        <div className="p-4 border-t border-border space-y-3">
+        <div className="p-4 border-t border-border space-y-3 shrink-0">
           <div className="space-y-2">
             <label className="text-xs font-medium text-muted-foreground">
               API URL

@@ -12,6 +12,14 @@ export default function Home() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [apiUrl, setApiUrl] = useState(process.env.NEXT_PUBLIC_API_URL || "");
 
+  // Collection selection state
+  const [selectedPdfCollections, setSelectedPdfCollections] = useState<
+    string[]
+  >([]);
+  const [selectedChatCollections, setSelectedChatCollections] = useState<
+    string[]
+  >([]);
+
   // PDF Preview state
   const [pdfPreviewOpen, setPdfPreviewOpen] = useState(false);
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState("");
@@ -35,6 +43,10 @@ export default function Home() {
         apiUrl={apiUrl}
         onApiUrlChange={setApiUrl}
         onPreviewPdf={handlePreviewPdf}
+        selectedPdfCollections={selectedPdfCollections}
+        selectedChatCollections={selectedChatCollections}
+        onPdfCollectionsChange={setSelectedPdfCollections}
+        onChatCollectionsChange={setSelectedChatCollections}
       />
 
       {/* Main Content */}
@@ -71,7 +83,11 @@ export default function Home() {
         </header>
 
         {/* Chat Interface */}
-        <ChatInterface apiUrl={apiUrl} />
+        <ChatInterface
+          apiUrl={apiUrl}
+          selectedPdfCollections={selectedPdfCollections}
+          selectedChatCollections={selectedChatCollections}
+        />
       </div>
 
       {/* PDF Preview Dialog */}

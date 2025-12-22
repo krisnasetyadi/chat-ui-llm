@@ -90,15 +90,21 @@ interface Message {
 
 interface ChatInterfaceProps {
   apiUrl: string;
+  selectedPdfCollections?: string[];
+  selectedChatCollections?: string[];
 }
 
-export function ChatInterface({ apiUrl }: ChatInterfaceProps) {
+export function ChatInterface({
+  apiUrl,
+  selectedPdfCollections = [],
+  selectedChatCollections = [],
+}: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [includePdf, setIncludePdf] = useState(true);
-  const [includeDb, setIncludeDb] = useState(true);
-  const [includeChat, setIncludeChat] = useState(true);
+  const [includeDb, setIncludeDb] = useState(false);
+  const [includeChat, setIncludeChat] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -215,6 +221,13 @@ export function ChatInterface({ apiUrl }: ChatInterfaceProps) {
       include_chat_results: includeChat,
       llm_provider: selectedProvider,
       llm_model: selectedModel,
+      // Include collection selection if any selected
+      pdf_collection_ids:
+        selectedPdfCollections.length > 0 ? selectedPdfCollections : undefined,
+      chat_collection_ids:
+        selectedChatCollections.length > 0
+          ? selectedChatCollections
+          : undefined,
     };
 
     HybridQueryApi.store<HybridResponse>(request as Record<string, unknown>)
@@ -693,27 +706,37 @@ export function ChatInterface({ apiUrl }: ChatInterfaceProps) {
                                           key={idx}
                                           className="text-xs space-y-1 pb-2 border-b border-border/50 last:border-0 last:pb-0"
                                         >
-                                          <div className="flex items-center gap-2">
+                                          <div className="flex items-center gap-2 flex-wrap">
                                             <Badge
-                                              variant={
-                                                chat.role === "user"
-                                                  ? "default"
-                                                  : "secondary"
-                                              }
+                                              variant="outline"
                                               className="text-[10px] h-4"
                                             >
-                                              {chat.role}
+                                              {chat.source}
                                             </Badge>
-                                            {chat.timestamp && (
+                                            {chat.platform && (
+                                              <Badge
+                                                variant="secondary"
+                                                className="text-[10px] h-4"
+                                              >
+                                                {chat.platform}
+                                              </Badge>
+                                            )}
+                                            {chat.relevance_score && (
                                               <span className="text-muted-foreground text-[10px]">
-                                                {new Date(
-                                                  chat.timestamp
-                                                ).toLocaleString()}
+                                                Score:{" "}
+                                                {chat.relevance_score.toFixed(
+                                                  3
+                                                )}
                                               </span>
                                             )}
                                           </div>
+                                          {chat.participants && (
+                                            <p className="text-[10px] text-muted-foreground">
+                                              👥 {chat.participants}
+                                            </p>
+                                          )}
                                           <p className="text-muted-foreground line-clamp-3">
-                                            {chat.content || chat.message}
+                                            {chat.content_preview}
                                           </p>
                                         </div>
                                       )
@@ -845,6 +868,33 @@ export function ChatInterface({ apiUrl }: ChatInterfaceProps) {
                 Chats
               </Label>
             </div>
+
+            {/* Selected collections indicator - inline with toggles */}
+            {(selectedPdfCollections.length > 0 ||
+              selectedChatCollections.length > 0) && (
+              <>
+                <span className="text-xs text-muted-foreground">|</span>
+                <span className="text-xs text-muted-foreground">Filter:</span>
+                {selectedPdfCollections.length > 0 && (
+                  <Badge
+                    variant="outline"
+                    className="text-[10px] py-0 h-4 border-teal-500/50 text-teal-600 dark:text-teal-400"
+                  >
+                    {selectedPdfCollections.length} PDF
+                    {selectedPdfCollections.length > 1 ? "s" : ""}
+                  </Badge>
+                )}
+                {selectedChatCollections.length > 0 && (
+                  <Badge
+                    variant="outline"
+                    className="text-[10px] py-0 h-4 border-purple-500/50 text-purple-600 dark:text-purple-400"
+                  >
+                    {selectedChatCollections.length} Chat
+                    {selectedChatCollections.length > 1 ? "s" : ""}
+                  </Badge>
+                )}
+              </>
+            )}
           </div>
 
           <form onSubmit={handleSubmit} className="flex gap-2">
